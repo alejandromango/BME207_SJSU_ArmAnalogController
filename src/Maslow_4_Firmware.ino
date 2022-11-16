@@ -5,6 +5,7 @@
 #include "html.h"
 #include "TLC59711.h"
 #include "MotorUnit.h"
+#include "LimitSwitch.h"
 #include "comands.h"
 #include "Ticker.h"
 
@@ -37,6 +38,9 @@ MotorUnit motor2 = MotorUnit(&tlc, 3, 2, ADC1_CHANNEL_6, 10000.0, adc_1_characte
 MotorUnit motor3 = MotorUnit(&tlc, 5, 4, ADC1_CHANNEL_0, 10000.0, adc_1_characterisitics, 22, -29);//ADC1_GPIO36_CHANNEL
 MotorUnit motor4 = MotorUnit(&tlc, 7, 6, ADC1_CHANNEL_4, 10000.0, adc_1_characterisitics, 25, 29);//ADC1_GPIO32_CHANNEL
 MotorUnit motor5 = MotorUnit(&tlc, 9, 8, ADC1_CHANNEL_7, 10000.0, adc_1_characterisitics, 13, -29);//ADC1_GPIO35_CHANNEL
+
+LimitSwitch flexionLimit(22, true);
+LimitSwitch extensionLimit = LimitSwitch(25, true);
 
 Ticker motorTimer = Ticker();
 
