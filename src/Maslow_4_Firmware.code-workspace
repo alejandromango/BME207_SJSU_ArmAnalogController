@@ -1,0 +1,16 @@
+{
+	"folders": [
+		{
+			"path": "../../../../../repos/ESP32-Experiment/Maslow_4_Firmware"
+		},
+		{
+			"name": "221116-095357-esp32-s3-devkitc-1",
+			"path": ".."
+		},
+		{
+			"name": "221116-082000-esp32doit-devkit-v1",
+			"path": "../../221116-082000-esp32doit-devkit-v1"
+		}
+	],
+	"settings": {}
+}
