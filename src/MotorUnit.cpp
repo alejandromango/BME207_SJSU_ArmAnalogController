@@ -28,53 +28,85 @@ MotorUnit::MotorUnit(TLC59711 *tlc,
                esp_adc_cal_characteristics_t *cal,
                byte angleCS,
                double mmperrev){
-    pid.reset(new MiniPID(0,0,0));
-    updatePIDTune();
-    pid->setOutputLimits(-65535,65535);
     motor.reset(new DRV8873LED(tlc, forwardPin, backwardPin, readbackPin, senseResistor, cal));
     angleSensor.reset(new AS5048A(angleCS));
-    _mmPerRevolution = mmperrev;
     angleSensor->init();
 }
 
 /*!
- *  @brief  Set a new setpoint for the PID loop
- *  @param newSetpoint Setpoint in the appropriate units for the control mode
+ *  @brief  Set a new max speed setting for the cycle
+ *  @param newSpeed New speed from {SLOW, MEDIUMSLOW, MEDIUMFAST, FAST}
  */
-void MotorUnit::setSetpoint(float newSetpoint){
-    setpoint = newSetpoint;
+void MotorUnit::setSpeed(speed newSpeed){
+    currentSpeedSetting = newSpeed;
+    switch (currentSpeedSetting) {
+        case SLOW:
+            currentSpeed = 20000;
+            break;
+        case MEDIUMSLOW:
+            currentSpeed = 30000;
+            break;
+        case MEDIUMFAST:
+            currentSpeed = 40000;
+            break;
+        case FAST:
+            currentSpeed = 50000;
+            break;
+    }
 }
 
 /*!
- *  @brief  Retrive the current setpoint of the PID loop
- *  @return Setpoint in the appropriate units for the control mode
+ *  @brief  Return the current max speed setting for the cycle
  */
-float MotorUnit::getSetpoint(){
-    return setpoint;
+speed MotorUnit::getSpeed(){
+    return currentSpeedSetting;
 }
 
 /*!
- *  @brief  Retrive the current error of the PID loop
- *  @return Error in the appropriate units for the control mode
+ *  @brief  Set the minimum movement angle to the currently measured angle
  */
-float MotorUnit::getError(){
-    return errorDist;
+void MotorUnit::setMinAngle(){
+    minAngle = getControllerState();
 }
 
 /*!
- *  @brief  Retrive the current output of the PID loops
- *  @return This will be an int within the set PID output range
+ *  @brief  Get the minimum movement angle set during calibration
  */
-int MotorUnit::getOutput(){
-    return output;
+float MotorUnit::getMinAngle(){
+    return minAngle;
+}/*!
+ *  @brief  Set the minimum movement angle to the currently measured angle
+ */
+void MotorUnit::setMaxAngle(){
+    maxAngle = getControllerState();
 }
 
 /*!
- *  @brief  Retrive the current input to the PID loop
- *  @return Current motor state in the appropriate units for the control mode
+ *  @brief  Get the minimum movement angle set during calibration
  */
-float MotorUnit::getInput(){
-    return currentState;
+float MotorUnit::getMaxAngle(){
+    return maxAngle;
+}
+
+/*!
+ *  @brief  Set the current movement direction the flexion
+ */
+void   MotorUnit::setFlexion(){
+    currentDirection = FLEXION;
+}
+
+/*!
+ *  @brief  Set the current movement direction the extension
+ */
+void   MotorUnit::setExtension(){
+    currentDirection = EXTENSION;
+}
+
+/*!
+ *  @brief  Get the currently set movement direction
+ */
+dir    MotorUnit::getDirection(){
+    return currentDirection;
 }
 
 /*!
@@ -83,7 +115,6 @@ float MotorUnit::getInput(){
  */
 void MotorUnit::setControlMode(mode newMode){
     controlMode = newMode;
-    updatePIDTune();
     stop();
 }
 
@@ -96,126 +127,21 @@ mode MotorUnit::getControlMode(){
 }
 
 /*!
- *  @brief  Calculate the position of the motor revolutions
- *  @param angle Total angle displacement from 0 in degrees
- *  @return Total revolutions displacement from 0
- */
-float MotorUnit::getRevolutionsFromAngle(float angle){
-    return angle/360;
-}
-
-/*!
- *  @brief  Calculate the position of the motor in distance units
- *  @param angle Total angle displacement from 0 in degrees
- *  @return The position displacement from 0 in mm
- */
-float MotorUnit::getDistanceFromAngle(float angle){
-    return getRevolutionsFromAngle(angle) * _mmPerRevolution;
-}
-
-/*!
- *  @brief  Set the pulley pitch
- *  @param newPitch Desired linear travel per encoder revolution in mm
- */
-void MotorUnit::setPitch(float newPitch){
-    _mmPerRevolution = newPitch;
-}
-
-/*!
- *  @brief  Retrive the pulley pitch
- *  @return The linear travel per encoder revolution in mm
- */
-float MotorUnit::getPitch(){
-    return _mmPerRevolution;
-}
-
-/*!
- *  @brief  Sets the PID tuning for the current control mode
- *  @param  kP The desired proportional tune
- *  @param  kI The desired integral tune
- *  @param  kD The desired derivative tune
- */
-void MotorUnit::setPIDTune(float kP, float kI, float kD){
-    if(controlMode == CURRENT){
-        ampProportional = kP;
-        ampIntegral = kI;
-        ampDerivative = kD;
-    }else if(controlMode == DISTANCE){
-        mmProportional = kP;
-        mmIntegral = kI;
-        mmDerivative = kD;
-    }else if(controlMode == SPEED){
-        vProportional = kP;
-        vIntegral = kI;
-        vDerivative = kD;
-    }else{
-        rProportional = kP;
-        rIntegral = kI;
-        rDerivative = kD;
-    }
-
-    updatePIDTune();
-}
-
-/*!
- *  @brief  Applies the appropriate PID tune based on the active control mode
- */
-void MotorUnit::updatePIDTune(){
-    if(controlMode == CURRENT){
-        activeP = ampProportional;
-        activeI = ampIntegral;
-        activeD = ampDerivative;
-    }else if(controlMode == DISTANCE){
-        activeP = mmProportional;
-        activeI = mmIntegral;
-        activeD = mmDerivative;
-    }else if(controlMode == SPEED){
-        activeP = vProportional;
-        activeI = vIntegral;
-        activeD = vDerivative;
-    }else{
-        activeP = rProportional;
-        activeI = rIntegral;
-        activeD = rDerivative;
-    }
-    pid->setPID(activeP, activeI, activeD);
-}
-
-/*!
- *  @brief  Retrive the proportional portion of the pid tune
- *  @return activeI
- */
-float MotorUnit::getP(){
-    return activeP;
-}
-
-/*!
- *  @brief  Retrive the integral portion of the pid tune
- *  @return activeI
- */
-float MotorUnit::getI(){
-    return activeI;
-}
-
-/*!
- *  @brief  Retrive the derivative portion of the pid tune
- *  @return activeD
- */
-float MotorUnit::getD(){
-    return activeD;
-}
-
-/*!
- *  @brief  Compute the necessary output to achieve the desired setpoint and
+ *  @brief  Compute the necessary output to achieve the desired motion and
  *  command the motor to that output
  */
-void MotorUnit::computePID(){
+void MotorUnit::computeSpeed(){
     lastInterval = (millis() - lastUpdate)/1000.0;
     lastUpdate = millis();
     currentState = getControllerState();
-    errorDist = setpoint - currentState;
-    output = copysign(int(pid->getOutput(currentState,setpoint)), errorDist);
-
+    // Normalize angle to between 0-2*pi, then take the cosine to get smooth speed curve
+    // Scale speed to max speed
+    outputMagnitude = (-cos(((currentState-minAngle)/maxAngle)*PI*2) + 1)/2 * currentSpeedSetting;
+    if (currentDirection == FLEXION) {
+        output = outputMagnitude;
+    } else {
+        output = -outputMagnitude;
+    }
     if(~disabled){
         motor->runAtPID(output);
     }else{
@@ -230,55 +156,29 @@ void MotorUnit::computePID(){
  *  in mA, or speed in mm/s.
  */
 float MotorUnit::getControllerState(){
-    if(controlMode == CURRENT){
-        mampsCurrent = motor->readCurrent();
-        return mampsCurrent;
+    anglePrevious = angleCurrent;
+    angleCurrent = angleSensor->RotationRawToAngle(angleSensor->getRawRotation());
+    if(controlMode == ANGLE){
+        return angleCurrent;
     }else{
-        previousAngleTotal = angleTotal;
-        angleCurrent = angleSensor->RotationRawToAngle(angleSensor->getRawRotation());
-        angleSensor->AbsoluteAngleRotation(&angleTotal, &angleCurrent, &anglePrevious);
-        if(controlMode == DISTANCE){
-            mmPosition = getDistanceFromAngle(angleTotal);
-            return mmPosition;
-        }else if(controlMode == SPEED){
-            mmPerSecond = (getDistanceFromAngle(angleTotal) - getDistanceFromAngle(previousAngleTotal))/lastInterval;
-            return mmPerSecond;
-        }else{
-            revolutionPosition = getRevolutionsFromAngle(angleTotal);
-            return revolutionPosition;
-        }
+        return ((angleCurrent-anglePrevious)/lastInterval);
     }
 }
 
 /*!
- *  @brief Stop the motor immediately (don't wait for PID to get around to it)
+ *  @brief Stop the motor immediately. Must be reset after stopping
  */
-void MotorUnit::eStop(){
+void MotorUnit::stop(){
     _disableControl();
     motor->stop();
 }
 
 /*!
- *  @brief  Resets the motor after an emergency stop. Makes sure the motor does
+ *  @brief  Resets the motor after a stop. Makes sure the motor does
  *  not move after being re-enabled
  */
 void MotorUnit::reset(){
-    stop();
     _enableControl();
-}
-
-/*!
- *  @brief  Stops the motor by manipulating the setpoint.
- *  Conditional based on control mode (stop means different things for
- *  speed and position)
- */
-void MotorUnit::stop(){
-    if(controlMode == CURRENT || controlMode == SPEED){
-        setpoint = 0;
-    }else{
-        setpoint = getControllerState();
-    }
-    computePID();
 }
 
 /*!

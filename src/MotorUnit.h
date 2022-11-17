@@ -10,7 +10,10 @@
 #include "DRV8873LED.h"
 #include "AS5048A.h"
 
-enum mode {REVOLUTIONS, CURRENT, DISTANCE, SPEED, MAX = SPEED};
+enum mode {ANGLE, SPEED};
+enum speed {SLOW, MEDIUMSLOW, MEDIUMFAST, FAST};
+enum dir {FLEXION, EXTENSION};
+
 class MotorUnit{
 
 public:
@@ -25,78 +28,45 @@ public:
     std::unique_ptr<MiniPID> pid;
     std::unique_ptr<DRV8873LED> motor;
     std::unique_ptr<AS5048A> angleSensor;
-    void   setSetpoint(float newSetpoint);
-    float  getSetpoint();
-    float  getError();
-    int  getOutput();
-    float  getInput();
+    void   setSpeed(speed s);
+    speed  getSpeed();
+    void   setMinAngle();
+    float  getMinAngle();
+    void   setMaxAngle();
+    float  getMaxAngle();
+    void   setFlexion();
+    void   setExtension();
+    dir    getDirection();
     void   setControlMode(mode newMode);
     mode   getControlMode();
-    float  getRevolutionsFromAngle(float angle);
-    float  getDistanceFromAngle(float angle);
-    void   setPitch(float newPitch);
-    float  getPitch();
-    void   setPIDTune(float kP, float kI, float kD);
-    void   updatePIDTune();
-    void   computePID();
-    float  getP();
-    float  getI();
-    float  getD();
+    void   computeSpeed();
     float  getControllerState();
-    void   eStop();
-    void   reset();
     void   stop();
+    void   reset();
 
 private:
     void   _disableControl();
     void   _enableControl();
 
-    float _mmPerRevolution = 10;
     float lastInterval = 0.001;
     unsigned long lastUpdate = millis();
-
-    // PID tunings for revolution position control
-    float rProportional = 100000;
-    float rIntegral = 10;
-    float rDerivative = 0.0;
-
-    // PID tunings for mm position control
-    float mmProportional = 200000;
-    float mmIntegral = 10;
-    float mmDerivative = 0;
-
-    // PID tunings for speed control
-    float vProportional = 0;
-    float vIntegral = 0;
-    float vDerivative = 0;
-
-    // PID tunings for current control
-    float ampProportional = 0;
-    float ampIntegral = 0;
-    float ampDerivative = 0;
-
-    // active PID tunings
-    float activeP = 0;
-    float activeI = 0;
-    float activeD = 0;
 
     bool disabled = false;
 
     int output = 0;
     float currentState = 0.0;
-    float setpoint = 0.0;
-    float errorDist = 0.0;
-
-    float angleTotal = 0.0;
-    float previousAngleTotal = 0.0;
-    float revolutionPosition = 0.0;
-    float mmPosition = 0.0;
-    float mmPerSecond = 0.0;
     float angleCurrent  = 0.0;
+    float minAngle = 0.0;
+    float maxAngle = 0.0;
+    int outputMagnitude = 0;
     float anglePrevious = 0.0;
 
     float mampsCurrent  = 0.0;
-    mode controlMode = DISTANCE;
+    mode controlMode = ANGLE;
+    speed currentSpeedSetting = SLOW;
+    dir currentDirection = EXTENSION;
+    int currentSpeed = 0;
+
 };
 
 #endif
