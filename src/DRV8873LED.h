@@ -2,6 +2,7 @@
  *  @file DRV8873LED.h
  *
  *  This is a library to interact with the TI DRV8873 chip via a peripheral PWM generator chip (TLC59711)
+ *  in order to drive a DC motor
  *
  */
 
