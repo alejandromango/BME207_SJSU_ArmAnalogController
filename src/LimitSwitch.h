@@ -19,12 +19,12 @@
  */
 class LimitSwitch{
 public:
-    LimitSwitch(uint8_t pinNum, bool pullup);
+    LimitSwitch(gpio_num_t pinNum, bool pullup);
     int getState();
     enum SwitchState {ON_LIMIT, OFF_LIMIT};
 private:
     int switchValue;
-    int8_t _pin;
+    gpio_num_t _pin;
     bool _pullup;
     SwitchState state;
 };

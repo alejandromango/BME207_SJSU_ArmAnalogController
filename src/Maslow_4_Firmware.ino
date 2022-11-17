@@ -11,9 +11,11 @@
 #include "driver/adc.h"
 #include "esp_adc_cal.h"
 
-#define BOARD_BRINGUP
+// #define BOARD_BRINGUP
 
 unsigned long ourTime = millis();
+bool hitFlexionLimit = false;
+bool calibrationFinished = false;
 
 esp_adc_cal_characteristics_t *adc_1_characterisitics = (esp_adc_cal_characteristics_t*) calloc(1, sizeof(esp_adc_cal_characteristics_t));
 esp_adc_cal_value_t val_type = esp_adc_cal_characterize(ADC_UNIT_1, ADC_ATTEN_DB_2_5, ADC_WIDTH_BIT_12, 1100, adc_1_characterisitics);
@@ -33,8 +35,8 @@ MotorUnit motor3 = MotorUnit(&tlc, 5, 4, ADC1_CHANNEL_0, 10000.0, adc_1_characte
 MotorUnit motor4 = MotorUnit(&tlc, 7, 6, ADC1_CHANNEL_4, 10000.0, adc_1_characterisitics, 25, 29);//ADC1_GPIO32_CHANNEL
 MotorUnit motor5 = MotorUnit(&tlc, 9, 8, ADC1_CHANNEL_7, 10000.0, adc_1_characterisitics, 13, -29);//ADC1_GPIO35_CHANNEL
 
-LimitSwitch flexionLimit(22, true);
-LimitSwitch extensionLimit = LimitSwitch(25, true);
+LimitSwitch flexionLimit = LimitSwitch(GPIO_NUM_14, true);
+LimitSwitch extensionLimit = LimitSwitch(GPIO_NUM_16, true);
 
 Ticker motorTimer = Ticker();
 
@@ -43,51 +45,65 @@ void setup(){
 
   tlc.begin();
   tlc.write();
-#ifndef BOARD_BRINGUP
-  motorTimer.attach_ms(100, onTimer); //Gets error when faster than ~100ms cycle
-#endif
+  #ifndef BOARD_BRINGUP
+    calibrateArmMovement();
+    motorTimer.attach_ms(100, onTimer); //Gets error when faster than ~100ms cycle
+  #endif
   Serial.println("Setup complete");
 
 }
 
+void calibrateArmMovement(){
+    while (1){
+        delay(1);
+        if (flexionLimit.getState()== 0 && extensionLimit.getState()==0){
+            motor1.stop();
+            Serial.println("EStop");
+        }
+        if (hitFlexionLimit == false){
+            motor1.motor->runAtPID(10000);
+            if (flexionLimit.getState() == 0){
+                hitFlexionLimit = true;
+                motor1.setMaxAngle();
+                Serial.printf("Max Angle Set to: %f\n", motor1.getMaxAngle());
+            }
+        } else {
+            motor1.motor->runAtPID(-10000);
+            if (extensionLimit.getState() == 0){
+                calibrationFinished = true;
+                motor1.setMinAngle();
+                Serial.printf("Min Angle Set to: %f\n", motor1.getMinAngle());
+                return;
+            }
+        }
+    }
+}
+
 void onTimer(){
   motor1.computeSpeed();
-  motor2.computeSpeed();
-  motor3.computeSpeed();
-  motor4.computeSpeed();
-  motor5.computeSpeed();
+  // motor2.computeSpeed();
+  // motor3.computeSpeed();
+  // motor4.computeSpeed();
+  // motor5.computeSpeed();
 }
 
 void loop(){
 #ifndef BOARD_BRINGUP
   delay(1);
-  if(setpointFlag){
-    motor1.setSetpoint(setPoint1);
-    motor2.setSetpoint(setPoint2);
-    motor3.setSetpoint(setPoint3);
-    motor4.setSetpoint(setPoint4);
-    motor5.setSetpoint(setPoint5);
-    setpointFlag = false;
+  if (flexionLimit.getState()==0 && extensionLimit.getState()==0){
+    motor1.stop();
+    Serial.println("EStop");
   }
-  if(pidFlag){
-    motor1.setPIDTune(proportional, integral, derivative);
-    motor2.setPIDTune(proportional, integral, derivative);
-    motor3.setPIDTune(proportional, integral, derivative);
-    motor4.setPIDTune(proportional, integral, derivative);
-    motor5.setPIDTune(proportional, integral, derivative);
-    pidFlag = false;
+  if (flexionLimit.getState() == 0){
+    motor1.setExtension();
+    Serial.println("Hit Flexion Limit");
   }
-  if(modeFlag){
-    motor1.setControlMode(updatedMode);
-    motor2.setControlMode(updatedMode);
-    motor3.setControlMode(updatedMode);
-    motor4.setControlMode(updatedMode);
-    motor5.setControlMode(updatedMode);
-    proportional = motor1.getP();
-    integral = motor1.getI();
-    derivative = motor1.getD();
-    modeFlag = false;
+  
+  if (extensionLimit.getState() == 0){
+    motor1.setFlexion();
+    Serial.println("Hit Extension Limit");
   }
+
 #else
   Serial.println("Pins high:");
   motor1.motor->highZ();
@@ -95,6 +111,7 @@ void loop(){
   motor3.motor->highZ();
   motor4.motor->highZ();
   motor5.motor->highZ();
+  motor1.angleSensor->printState();
   delay(5000);
   Serial.println("Pins low:");
   motor1.motor->stop();
