@@ -11,12 +11,35 @@
 #include "driver/adc.h"
 #include "esp_adc_cal.h"
 
+#include <algorithm>    // std::shuffle
+#include <array>        // std::array
+#include <random>       // std::default_random_engine
+#include <chrono>
+
 // #define BOARD_BRINGUP
 
 unsigned long ourTime = millis();
 bool hitFlexionLimit = false;
 bool calibrationFinished = false;
 bool needSpeed = true;
+int cycleNumber = -1;
+enum cyclingStates {INIT, SETTLING, FLEXING, EXTENDING, FINISHED, ABORTED, RESETTING, NEXT};
+cyclingStates cState = INIT;
+
+// generate a randomly ordered array of speeds
+// https://cplusplus.com/reference/algorithm/shuffle/
+std::array<speed,40> cycleSpeeds {SLOW, MEDIUMSLOW, MEDIUMFAST, FAST,
+                                  SLOW, MEDIUMSLOW, MEDIUMFAST, FAST,
+                                  SLOW, MEDIUMSLOW, MEDIUMFAST, FAST,
+                                  SLOW, MEDIUMSLOW, MEDIUMFAST, FAST,
+                                  SLOW, MEDIUMSLOW, MEDIUMFAST, FAST,
+                                  SLOW, MEDIUMSLOW, MEDIUMFAST, FAST,
+                                  SLOW, MEDIUMSLOW, MEDIUMFAST, FAST,
+                                  SLOW, MEDIUMSLOW, MEDIUMFAST, FAST,
+                                  SLOW, MEDIUMSLOW, MEDIUMFAST, FAST,
+                                  SLOW, MEDIUMSLOW, MEDIUMFAST, FAST};
+// obtain a time-based seed:
+unsigned seed = std::chrono::system_clock::now().time_since_epoch().count();
 
 esp_adc_cal_characteristics_t *adc_1_characterisitics = (esp_adc_cal_characteristics_t*) calloc(1, sizeof(esp_adc_cal_characteristics_t));
 esp_adc_cal_value_t val_type = esp_adc_cal_characterize(ADC_UNIT_1, ADC_ATTEN_DB_2_5, ADC_WIDTH_BIT_12, 1100, adc_1_characterisitics);
@@ -42,15 +65,25 @@ LimitSwitch extensionLimit = LimitSwitch(GPIO_NUM_16, true);
 Ticker motorTimer = Ticker();
 
 void setup(){
-  Serial.begin(115200);
+    Serial.begin(115200);
 
-  tlc.begin();
-  tlc.write();
-  #ifndef BOARD_BRINGUP
-    calibrateArmMovement();
-    motorTimer.attach_ms(100, onTimer); //Gets error when faster than ~100ms cycle
-  #endif
-  Serial.println("Setup complete");
+    tlc.begin();
+    tlc.write();
+    // Shuffle our array of speeds for randomization
+    Serial.println("Speeds before shuffling");
+    for (int i = 0; i < 40; i++){
+        Serial.println(cycleSpeeds[i]);
+    }
+    shuffle (cycleSpeeds.begin(), cycleSpeeds.end(), std::default_random_engine(seed));
+    Serial.println("Speeds after shuffling");
+    for (int i = 0; i < 40; i++){
+        Serial.println(cycleSpeeds[i]);
+    }
+    #ifndef BOARD_BRINGUP
+        calibrateArmMovement();
+        motorTimer.attach_ms(100, onTimer); //Gets error when faster than ~100ms cycle
+    #endif
+    Serial.println("Setup complete");
 
 }
 
@@ -99,21 +132,70 @@ void onTimer(){
     // motor5.computeSpeed();
 }
 
+void printCurrentSpeed(){
+    switch (motor1.getSpeed()){
+        case SLOW:
+        case MEDIUMSLOW:
+        case MEDIUMFAST:
+        case FAST:
+            break;
+    }
+}
+
 void loop(){
 #ifndef BOARD_BRINGUP
   delay(1);
   if (flexionLimit.getState()==0 && extensionLimit.getState()==0){
     motor1.stop();
-    Serial.println("EStop");
+    Serial.println("Aborted Run");
+    cState = ABORTED;
   }
-  if (flexionLimit.getState() == 0){
-    motor1.setExtension();
-    Serial.println("Hit Flexion Limit");
-  }
-  
-  if (extensionLimit.getState() == 0){
-    motor1.setFlexion();
-    Serial.println("Hit Extension Limit");
+  switch (cState) {
+    case INIT:
+        Serial.println("Waiting before starting cycling");
+        delay (5000);
+        Serial.println("Beginnning cycling");
+        cState = NEXT;
+        break;
+    case SETTLING:
+        break;
+    case EXTENDING:
+        if (extensionLimit.getState() == 0){
+            motor1.stop();
+            Serial.println("Hit Flexion Limit, Loading Next Movement");
+            cState = NEXT;
+        }
+        break;
+    case FLEXING:
+        if (flexionLimit.getState() == 0){
+            motor1.setExtension();
+            Serial.println("Hit Flexion Limit, Starting Extension");
+            cState = EXTENDING;
+        }
+        break;
+    case FINISHED:
+        break;
+    case ABORTED:
+        break;
+    case NEXT:
+        cycleNumber += 1;
+        if (cycleNumber > 39){
+            motor1.stop();
+            cState = FINISHED;
+            Serial.println("Finished all movement cycles");
+            break;
+        }
+        Serial.println("Starting next cycle in 3s");
+        delay(1000);
+        Serial.println("Starting next cycle in 2s");
+        delay(1000);
+        Serial.println("Starting next cycle in 1s");
+        delay(1000);
+        motor1.setSpeed(cycleSpeeds[cycleNumber]);
+        motor1.setFlexion();
+        motor1.reset();
+        cState = FLEXING;
+        break;
   }
 
 #else
