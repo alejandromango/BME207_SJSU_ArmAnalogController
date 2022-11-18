@@ -65,7 +65,8 @@ private:
     mode controlMode = ANGLE;
     speed currentSpeedSetting = SLOW;
     dir currentDirection = EXTENSION;
-    int currentSpeed = 0;
+    int currentSpeed = 40000;
+    int minSpeed = 35000;
 
 };
 

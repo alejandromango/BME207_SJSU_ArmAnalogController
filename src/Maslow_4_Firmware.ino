@@ -16,6 +16,7 @@
 unsigned long ourTime = millis();
 bool hitFlexionLimit = false;
 bool calibrationFinished = false;
+bool needSpeed = true;
 
 esp_adc_cal_characteristics_t *adc_1_characterisitics = (esp_adc_cal_characteristics_t*) calloc(1, sizeof(esp_adc_cal_characteristics_t));
 esp_adc_cal_value_t val_type = esp_adc_cal_characterize(ADC_UNIT_1, ADC_ATTEN_DB_2_5, ADC_WIDTH_BIT_12, 1100, adc_1_characterisitics);
@@ -61,18 +62,28 @@ void calibrateArmMovement(){
             Serial.println("EStop");
         }
         if (hitFlexionLimit == false){
-            motor1.motor->runAtPID(10000);
+            if (needSpeed == true){
+                motor1.motor->runAtPID(35000);
+                Serial.println("Set motor speed forward");
+                needSpeed = false;
+            }
             if (flexionLimit.getState() == 0){
                 hitFlexionLimit = true;
+                needSpeed = true;
                 motor1.setMaxAngle();
                 Serial.printf("Max Angle Set to: %f\n", motor1.getMaxAngle());
             }
         } else {
-            motor1.motor->runAtPID(-10000);
+            if (needSpeed == true){
+                motor1.motor->runAtPID(-35000);
+                Serial.println("Set motor speed backward");
+                needSpeed = false;
+            }
             if (extensionLimit.getState() == 0){
                 calibrationFinished = true;
                 motor1.setMinAngle();
                 Serial.printf("Min Angle Set to: %f\n", motor1.getMinAngle());
+                motor1.stop();
                 return;
             }
         }
@@ -80,11 +91,12 @@ void calibrateArmMovement(){
 }
 
 void onTimer(){
-  motor1.computeSpeed();
-  // motor2.computeSpeed();
-  // motor3.computeSpeed();
-  // motor4.computeSpeed();
-  // motor5.computeSpeed();
+    motor1.computeSpeed();
+    Serial.printf("Angle Measure: %f\n", motor1.getControllerState());
+    // motor2.computeSpeed();
+    // motor3.computeSpeed();
+    // motor4.computeSpeed();
+    // motor5.computeSpeed();
 }
 
 void loop(){
