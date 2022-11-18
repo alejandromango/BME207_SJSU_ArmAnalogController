@@ -71,20 +71,20 @@ void setup(){
     tlc.begin();
     tlc.write();
     // Shuffle our array of speeds for randomization
-    Serial.println("Speeds before shuffling");
+    printMessage("Speeds before shuffling");
     for (int i = 0; i < 40; i++){
-        Serial.println(cycleSpeeds[i]);
+        printMessageInt("", cycleSpeeds[i]);
     }
     shuffle (cycleSpeeds.begin(), cycleSpeeds.end(), std::default_random_engine(seed));
-    Serial.println("Speeds after shuffling");
+    printMessage("Speeds after shuffling");
     for (int i = 0; i < 40; i++){
-        Serial.println(cycleSpeeds[i]);
+        printMessageInt("",cycleSpeeds[i]);
     }
     #ifndef BOARD_BRINGUP
         calibrateArmMovement();
         motorTimer.attach_ms(100, onTimer); //Gets error when faster than ~100ms cycle
     #endif
-    Serial.println("Setup complete");
+    printMessage("Setup complete");
 
 }
 
@@ -93,30 +93,30 @@ void calibrateArmMovement(){
         delay(1);
         if (flexionLimit.getState()== 0 && extensionLimit.getState()==0){
             motor1.stop();
-            Serial.println("EStop");
+            printMessage("EStop");
         }
         if (hitFlexionLimit == false){
             if (needSpeed == true){
                 motor1.motor->runAtPID(35000);
-                Serial.println("Set motor speed forward");
+                printMessage("Set motor speed forward");
                 needSpeed = false;
             }
             if (flexionLimit.getState() == 0){
                 hitFlexionLimit = true;
                 needSpeed = true;
                 motor1.setMaxAngle();
-                Serial.printf("Max Angle Set to: %f\n", motor1.getMaxAngle());
+                printMessageFloat("Min Angle Set to", motor1.getMaxAngle());
             }
         } else {
             if (needSpeed == true){
                 motor1.motor->runAtPID(-35000);
-                Serial.println("Set motor speed backward");
+                printMessage("Set motor speed backward");
                 needSpeed = false;
             }
             if (extensionLimit.getState() == 0){
                 calibrationFinished = true;
                 motor1.setMinAngle();
-                Serial.printf("Min Angle Set to: %f\n", motor1.getMinAngle());
+                printMessageFloat("Min Angle Set to", motor1.getMinAngle());
                 motor1.stop();
                 return;
             }
@@ -126,7 +126,7 @@ void calibrateArmMovement(){
 
 void onTimer(){
     motor1.computeSpeed();
-    Serial.printf("Angle Measure: %f\n", motor1.getControllerState());
+    printMessageFloat("Angle Measure", motor1.getControllerState());
     // motor2.computeSpeed();
     // motor3.computeSpeed();
     // motor4.computeSpeed();
@@ -148,14 +148,14 @@ void loop(){
   delay(1);
   if (flexionLimit.getState()==0 && extensionLimit.getState()==0){
     motor1.stop();
-    Serial.println("Aborted Run");
+    printMessage("Aborted Run");
     cState = ABORTED;
   }
   switch (cState) {
     case INIT:
-        Serial.println("Waiting before starting cycling");
+        printMessage("Waiting before starting cycling");
         delay (5000);
-        Serial.println("Beginnning cycling");
+        printMessage("Beginnning cycling");
         cState = NEXT;
         break;
     case SETTLING:
@@ -163,14 +163,14 @@ void loop(){
     case EXTENDING:
         if (extensionLimit.getState() == 0){
             motor1.stop();
-            Serial.println("Hit Flexion Limit, Loading Next Movement");
+            printMessage("Hit Flexion Limit, Loading Next Movement");
             cState = NEXT;
         }
         break;
     case FLEXING:
         if (flexionLimit.getState() == 0){
             motor1.setExtension();
-            Serial.println("Hit Flexion Limit, Starting Extension");
+            printMessage("Hit Flexion Limit, Starting Extension");
             cState = EXTENDING;
         }
         break;
@@ -183,14 +183,14 @@ void loop(){
         if (cycleNumber > 39){
             motor1.stop();
             cState = FINISHED;
-            Serial.println("Finished all movement cycles");
+            printMessage("Finished all movement cycles");
             break;
         }
-        Serial.println("Starting next cycle in 3s");
+        printMessage("Starting next cycle in 3s");
         delay(1000);
-        Serial.println("Starting next cycle in 2s");
+        printMessage("Starting next cycle in 2s");
         delay(1000);
-        Serial.println("Starting next cycle in 1s");
+        printMessage("Starting next cycle in 1s");
         delay(1000);
         motor1.setSpeed(cycleSpeeds[cycleNumber]);
         motor1.setFlexion();
@@ -200,7 +200,7 @@ void loop(){
   }
 
 #else
-  Serial.println("Pins high:");
+  printMessage("Pins high:");
   motor1.motor->highZ();
   motor2.motor->highZ();
   motor3.motor->highZ();
@@ -208,7 +208,7 @@ void loop(){
   motor5.motor->highZ();
   motor1.angleSensor->printState();
   delay(5000);
-  Serial.println("Pins low:");
+  printMessage("Pins low:");
   motor1.motor->stop();
   motor2.motor->stop();
   motor3.motor->stop();

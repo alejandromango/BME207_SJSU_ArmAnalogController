@@ -5,6 +5,7 @@
  *  By Alexander Martin-Ginnold for Maslow CNC
  ****************************************************/
 #include "MotorUnit.h"
+#include "ArmLogger.h"
 #include "math.h"
 /*!
  *  @brief  Instantiates a new MotorUnit class. Instantiates classes for
@@ -42,19 +43,19 @@ void MotorUnit::setSpeed(speed newSpeed){
     switch (currentSpeedSetting) {
         case SLOW:
             currentSpeed = 35000;
-            Serial.println("Running at medium slow speed");
+            printMessage("Running at medium slow speed");
             break;
         case MEDIUMSLOW:
             currentSpeed = 35000;
-            Serial.println("Running at medium slow speed");
+            printMessage("Running at medium slow speed");
             break;
         case MEDIUMFAST:
             currentSpeed = 35000;
-            Serial.println("Running at medium fast speed");
+            printMessage("Running at medium fast speed");
             break;
         case FAST:
             currentSpeed = 35000;
-            Serial.println("Running at fast speed");
+            printMessage("Running at fast speed");
             break;
     }
 }

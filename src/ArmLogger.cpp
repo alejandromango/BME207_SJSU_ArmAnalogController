@@ -11,25 +11,37 @@ void outputLog(logType l, char* message){
 
 void printMessage(String message){
     char buff[80];
-    sprintf(buff, "%s", message);
+    int mes_len = message.length() + 1;
+    char mes[mes_len];
+    message.toCharArray(mes, mes_len);
+    sprintf(buff, "%s", mes);
     outputLog(LOG, buff);
 }
 
 void printMessageFloat(String message, float value){
     char buff[80];
-    sprintf(buff, "%s: %f", message, value);
+    int mes_len = message.length() + 1;
+    char mes[mes_len];
+    message.toCharArray(mes, mes_len);
+    sprintf(buff, "%s: %f", mes, value);
     outputLog(LOG, buff);
 }
 
 void printMessageHex(String message, int value){
     char buff[80];
-    sprintf(buff, "%s: %x", message, value);
+    int mes_len = message.length() + 1;
+    char mes[mes_len];
+    message.toCharArray(mes, mes_len);
+    sprintf(buff, "%s: %x", mes, value);
     outputLog(LOG, buff);
 }
 
 void printMessageInt(String message, int value){
     char buff[80];
-    sprintf(buff, "%s: %i", message, value);
+    int mes_len = message.length() + 1;
+    char mes[mes_len];
+    message.toCharArray(mes, mes_len);
+    sprintf(buff, "%s: %i", mes, value);
     outputLog(LOG, buff);
 }
 

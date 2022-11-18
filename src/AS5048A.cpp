@@ -205,14 +205,14 @@ void AS5048A::printState(){
   word data;
   data = AS5048A::getState();
   if(AS5048A::error()){
-    Serial.println("Error bit was set! (function printState register Diagnostics + Automatic Gain Control (AGC) )");
+    printMessage("Error bit was set! (function printState register Diagnostics + Automatic Gain Control (AGC) )");
   }
-  Serial.println(" ");
-  Serial.println("The value of the automatic control of the magnetic field gain");
-  Serial.println("255 is a low magnetic field");
-  Serial.println("0 is a high magnetic field");
-  //Serial.println(lowByte(data), BIN);
-  Serial.println(lowByte(data), DEC);
+  printMessage(" ");
+  printMessage("The value of the automatic control of the magnetic field gain");
+  printMessage("255 is a low magnetic field");
+  printMessage("0 is a high magnetic field");
+  //printMessageHex("", lowByte(data));
+  printMessageInt("", lowByte(data));
   
 /**Diagnostic Functions AS5048
   * See Figure 22 register address x3FFD (AS5048A) or Figure 31 register address 251 dec (AS5048B)
@@ -221,17 +221,11 @@ void AS5048A::printState(){
   * • COMP low, indicates a high magnetic field. It is recommended to monitor in addition the magnitude value.
   * • COMP high, indicated a weak magnetic field. It is recommended to monitor the magnitude value.
  */
-  Serial.print("Diagnostic flags");
-  Serial.print(" OCF-");
-  Serial.print(bitRead(data,8), DEC);
-  Serial.print(" COF-");
-  Serial.print(bitRead(data,9), DEC);
-  Serial.print(" Comp Low-");
-  Serial.print(bitRead(data,10), DEC);
-  Serial.print(" Comp High-");
-  Serial.println(bitRead(data,11), DEC);
-  Serial.println(" ");
-  //Serial.println(data, BIN);
+  printMessage("Diagnostic flags");
+  printMessageInt(" OCF-", bitRead(data,8));
+  printMessageInt(" COF-", bitRead(data,9));
+  printMessageInt(" Comp Low-", bitRead(data,10));
+  printMessageInt(" Comp High-", bitRead(data,11));
 }
 
 
@@ -243,7 +237,7 @@ void AS5048A::printState(){
 byte AS5048A::getGain(){
   word data = AS5048A::getState();
   if(AS5048A::error()){
-    Serial.print("Error bit was set! (function getGain register Diagnostics + Automatic Gain Control (AGC) )");
+    printMessage("Error bit was set! (function getGain register Diagnostics + Automatic Gain Control (AGC) )");
   }
   return (byte) data & 0xFF;
 }
@@ -272,17 +266,12 @@ void AS5048A::printErrors(){
   word data;
   data = AS5048A::getErrors();
   if(AS5048A::error()){
-    Serial.println("Error bit was set! (function printErrors register Clear Error Flag)");
+    printMessage("Error bit was set! (function printErrors register Clear Error Flag)");
   }
-  Serial.println("Error register");
-  Serial.print("Command frame (packet) error ");
-  Serial.println(bitRead(data,0), DEC);
-  Serial.print("Invalid command ");
-  Serial.println(bitRead(data,1), DEC);
-  Serial.print("Parity bit error ");
-  Serial.println(bitRead(data,2), DEC);
-  Serial.println(" ");
-  //Serial.println(data, BIN);
+  printMessage("Error register");
+  printMessageInt("Command frame (packet) error ", bitRead(data,0));
+  printMessageInt("Invalid command ", bitRead(data,1));
+  printMessageInt("Parity bit error ", bitRead(data,2));
 } 
 
 /**
@@ -339,7 +328,7 @@ void AS5048A::ProgAbsolAngleZeroPosit(){
     AS5048A::write(AS5048A_PROGRAMMING_CONTROL, bitSet(programcontrol,6));
   }
 
-  Serial.println(AS5048A::getRawRotation(), DEC); 
+  printMessageInt("Raw rotation", AS5048A::getRawRotation()); 
 }
 
 /**
@@ -419,10 +408,8 @@ word AS5048A::read(word RegisterAddress, bool MeanValueMedian){
   SPI.endTransaction();
 
   #ifdef AS5048A_DEBUG
-    Serial.print("Read (0x");
-    Serial.print(RegisterAddress, HEX);
-    Serial.print(") with command: 0b");
-    Serial.println(command, BIN);
+    printMessageHex("Read (0x", RegisterAddress);
+    printMessageHex(") with command: 0x", command);
   #endif
   
   //Send the command and Now read the response
@@ -432,7 +419,7 @@ word AS5048A::read(word RegisterAddress, bool MeanValueMedian){
       digitalWrite(_cs, LOW);
       array_data[i] = SPI.transfer16(command) & ~0xC000;
       digitalWrite(_cs, HIGH);
-      //Serial.println(array_data[i], BIN);   
+      //printMessageInt("", array_data[i]);   
     }
 
     AS5048A::quickSort(array_data, 0, 15);
@@ -449,16 +436,16 @@ word AS5048A::read(word RegisterAddress, bool MeanValueMedian){
     digitalWrite(_cs, HIGH);
     
     #ifdef AS5048A_DEBUG
-      Serial.print("Read returned: ");
-      Serial.print(highByte(readdata), BIN);
-      Serial.print(lowByte(readdata), BIN);
+      printMessage("Read returned: ");
+      printMessageHex("High Byte" highByte(readdata));
+      printMessageHex("Low Byte", lowByte(readdata));
     #endif
 
     //Check if the error bit is set
     //If the 15 bit is set to 1 (transmission error in the previous transfer of the master) _errorFlag set to 1 otherwise 0
     if (bitRead(readdata,14)) {
       #ifdef AS5048A_DEBUG
-        Serial.println("Setting error bit");
+        printMessage("Setting error bit");
       #endif
       _errorFlag = true;
     }else {
@@ -496,10 +483,8 @@ word AS5048A::write(word RegisterAddress, word WriteData) {
   dataToSend |= ((word)spiCalcEvenParity(dataToSend) << 15);
   
 #ifdef AS5048A_DEBUG
-  Serial.print("Write (0x");
-  Serial.print(RegisterAddress, HEX);
-  Serial.print(") with command: 0b");
-  Serial.println(command, BIN);
+  printMessageHex("Write 0x", RegisterAddress);
+  printMessageHex("with command: 0b", command);
 #endif
 
   //SPI - begin transaction
@@ -511,8 +496,7 @@ word AS5048A::write(word RegisterAddress, word WriteData) {
   digitalWrite(_cs, HIGH);
 
 #ifdef AS5048A_DEBUG
-  Serial.print("Sending data to write: ");
-  Serial.println(dataToSend, BIN);
+  printMessageHex("Sending data to write: ", dataToSend);
 #endif
 
   //Now send the data packet
