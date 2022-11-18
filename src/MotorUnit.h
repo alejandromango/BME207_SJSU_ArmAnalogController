@@ -41,6 +41,7 @@ public:
     mode   getControlMode();
     void   computeSpeed();
     float  getControllerState();
+    float  getCurrentAngle();
     void   stop();
     void   reset();
 

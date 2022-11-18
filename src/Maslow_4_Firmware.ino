@@ -24,21 +24,23 @@ bool hitFlexionLimit = false;
 bool calibrationFinished = false;
 bool needSpeed = true;
 int cycleNumber = -1;
+int numReplicates = 1;
+const int numCycles = numReplicates * (FAST + 1);
 enum cyclingStates {INIT, SETTLING, FLEXING, EXTENDING, FINISHED, ABORTED, RESETTING, NEXT};
 cyclingStates cState = INIT;
 
 // generate a randomly ordered array of speeds
 // https://cplusplus.com/reference/algorithm/shuffle/
-std::array<speed,40> cycleSpeeds {SLOW, MEDIUMSLOW, MEDIUMFAST, FAST,
-                                  SLOW, MEDIUMSLOW, MEDIUMFAST, FAST,
-                                  SLOW, MEDIUMSLOW, MEDIUMFAST, FAST,
-                                  SLOW, MEDIUMSLOW, MEDIUMFAST, FAST,
-                                  SLOW, MEDIUMSLOW, MEDIUMFAST, FAST,
-                                  SLOW, MEDIUMSLOW, MEDIUMFAST, FAST,
-                                  SLOW, MEDIUMSLOW, MEDIUMFAST, FAST,
-                                  SLOW, MEDIUMSLOW, MEDIUMFAST, FAST,
-                                  SLOW, MEDIUMSLOW, MEDIUMFAST, FAST,
-                                  SLOW, MEDIUMSLOW, MEDIUMFAST, FAST};
+std::array<speed,4> cycleSpeeds {SLOW, MEDIUMSLOW, MEDIUMFAST, FAST};
+                                //   SLOW, MEDIUMSLOW, MEDIUMFAST, FAST,
+                                //   SLOW, MEDIUMSLOW, MEDIUMFAST, FAST,
+                                //   SLOW, MEDIUMSLOW, MEDIUMFAST, FAST,
+                                //   SLOW, MEDIUMSLOW, MEDIUMFAST, FAST,
+                                //   SLOW, MEDIUMSLOW, MEDIUMFAST, FAST,
+                                //   SLOW, MEDIUMSLOW, MEDIUMFAST, FAST,
+                                //   SLOW, MEDIUMSLOW, MEDIUMFAST, FAST,
+                                //   SLOW, MEDIUMSLOW, MEDIUMFAST, FAST,
+                                //   SLOW, MEDIUMSLOW, MEDIUMFAST, FAST};
 // obtain a time-based seed:
 unsigned seed = std::chrono::system_clock::now().time_since_epoch().count();
 
@@ -64,6 +66,8 @@ LimitSwitch flexionLimit = LimitSwitch(GPIO_NUM_14, true);
 LimitSwitch extensionLimit = LimitSwitch(GPIO_NUM_16, true);
 
 Ticker motorTimer = Ticker();
+Ticker angleTimer = Ticker();
+float sampleRateS = 1/60;
 
 void setup(){
     Serial.begin(115200);
@@ -72,17 +76,18 @@ void setup(){
     tlc.write();
     // Shuffle our array of speeds for randomization
     printMessage("Speeds before shuffling");
-    for (int i = 0; i < 40; i++){
+    for (int i = 0; i < numCycles; i++){
         printMessageInt("", cycleSpeeds[i]);
     }
     shuffle (cycleSpeeds.begin(), cycleSpeeds.end(), std::default_random_engine(seed));
     printMessage("Speeds after shuffling");
-    for (int i = 0; i < 40; i++){
+    for (int i = 0; i < numCycles; i++){
         printMessageInt("",cycleSpeeds[i]);
     }
     #ifndef BOARD_BRINGUP
         calibrateArmMovement();
-        motorTimer.attach_ms(100, onTimer); //Gets error when faster than ~100ms cycle
+        motorTimer.attach_ms(100, onControlTimer); //Gets error when faster than ~100ms cycle
+        angleTimer.attach(sampleRateS, onAngleTimer);
     #endif
     printMessage("Setup complete");
 
@@ -124,13 +129,16 @@ void calibrateArmMovement(){
     }
 }
 
-void onTimer(){
+void onControlTimer(){
     motor1.computeSpeed();
-    printMessageFloat("Angle Measure", motor1.getControllerState());
     // motor2.computeSpeed();
     // motor3.computeSpeed();
     // motor4.computeSpeed();
     // motor5.computeSpeed();
+}
+
+void onAngleTimer(){
+    angleLog(motor1.getCurrentAngle());
 }
 
 void printCurrentSpeed(){
@@ -147,9 +155,12 @@ void loop(){
 #ifndef BOARD_BRINGUP
   delay(1);
   if (flexionLimit.getState()==0 && extensionLimit.getState()==0){
-    motor1.stop();
-    printMessage("Aborted Run");
-    cState = ABORTED;
+    if (cState != ABORTED){
+        motor1.stop();
+        printMessage("Aborted Run");
+        angleTimer.detach();
+        cState = ABORTED;
+    }
   }
   switch (cState) {
     case INIT:
@@ -184,6 +195,7 @@ void loop(){
             motor1.stop();
             cState = FINISHED;
             printMessage("Finished all movement cycles");
+            angleTimer.detach();
             break;
         }
         printMessage("Starting next cycle in 3s");

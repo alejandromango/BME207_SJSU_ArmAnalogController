@@ -157,8 +157,7 @@ void MotorUnit::computeSpeed(){
 /*!
  *  @brief  Retrieve the current state of the motor appropriate for the currently
  *  set control mode.
- *  @return Actual state of the motor. This could be position in revolutions or mm, current
- *  in mA, or speed in mm/s.
+ *  @return Actual state of the motor in degrees or degrees/s
  */
 float MotorUnit::getControllerState(){
     anglePrevious = angleCurrent;
@@ -168,6 +167,14 @@ float MotorUnit::getControllerState(){
     }else{
         return ((angleCurrent-anglePrevious)/lastInterval);
     }
+}
+
+/*!
+ *  @brief  Retrieve the most receent angle measurement without triggering a new measurement
+ *  @return Angle of the motor in degrees
+ */
+float MotorUnit::getCurrentAngle(){
+    return angleCurrent;
 }
 
 /*!
