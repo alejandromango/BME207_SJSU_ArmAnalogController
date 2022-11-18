@@ -1,7 +1,7 @@
 #include "Arduino.h"
 
 #include "AS5048A.h"
-#include "logging.h"
+#include "ArmLogger.h"
 
 //#define AS5048A_DEBUG
 

@@ -7,7 +7,7 @@
 #include "MotorUnit.h"
 #include "LimitSwitch.h"
 #include "Ticker.h"
-#include "logging.h"
+#include "ArmLogger.h"
 
 #include "driver/adc.h"
 #include "esp_adc_cal.h"
