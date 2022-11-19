@@ -153,7 +153,7 @@ void printCurrentSpeed(){
 
 void loop(){
 #ifndef BOARD_BRINGUP
-  delay(1);
+  delay(5);
   if (flexionLimit.getState()==0 && extensionLimit.getState()==0){
     if (cState != ABORTED){
         motor1.stop();
@@ -191,11 +191,11 @@ void loop(){
         break;
     case NEXT:
         cycleNumber += 1;
-        if (cycleNumber > 39){
+        if (cycleNumber > (numCycles - 1)){
             motor1.stop();
-            cState = FINISHED;
             printMessage("Finished all movement cycles");
             angleTimer.detach();
+            cState = FINISHED;
             break;
         }
         printMessage("Starting next cycle in 3s");
