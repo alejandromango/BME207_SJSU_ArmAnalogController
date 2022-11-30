@@ -19,10 +19,10 @@ LimitSwitch::LimitSwitch(gpio_num_t pinNum, bool pullup){
     _pin = pinNum;
     _pullup = pullup;
     if (_pullup)
-        gpio_pullup_en(_pin);
+        pinMode(_pin, INPUT_PULLUP);
 
     else
-        gpio_pullup_dis(_pin);
+        pinMode(_pin, INPUT_PULLDOWN);
 }
 
 /*!

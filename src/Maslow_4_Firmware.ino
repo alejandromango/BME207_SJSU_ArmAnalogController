@@ -20,6 +20,7 @@
 // #define BOARD_BRINGUP
 
 unsigned long ourTime = millis();
+bool startCommand = false;
 bool hitFlexionLimit = false;
 bool calibrationFinished = false;
 bool needSpeed = true;
@@ -47,23 +48,23 @@ unsigned seed = std::chrono::system_clock::now().time_since_epoch().count();
 esp_adc_cal_characteristics_t *adc_1_characterisitics = (esp_adc_cal_characteristics_t*) calloc(1, sizeof(esp_adc_cal_characteristics_t));
 esp_adc_cal_value_t val_type = esp_adc_cal_characterize(ADC_UNIT_1, ADC_ATTEN_DB_2_5, ADC_WIDTH_BIT_12, 1100, adc_1_characterisitics);
 esp_err_t config_err_0 = adc1_config_width(ADC_WIDTH_BIT_12);
-esp_err_t config_err_1 = adc1_config_channel_atten(ADC1_CHANNEL_5, ADC_ATTEN_DB_2_5);//ADC1_GPIO33_CHANNEL
-esp_err_t config_err_2 = adc1_config_channel_atten(ADC1_CHANNEL_6, ADC_ATTEN_DB_2_5);//ADC1_GPIO34_CHANNEL
-esp_err_t config_err_3 = adc1_config_channel_atten(ADC1_CHANNEL_0, ADC_ATTEN_DB_2_5);//ADC1_GPIO36_CHANNEL
-esp_err_t config_err_4 = adc1_config_channel_atten(ADC1_CHANNEL_4, ADC_ATTEN_DB_2_5);//ADC1_GPIO32_CHANNEL
-esp_err_t config_err_5 = adc1_config_channel_atten(ADC1_CHANNEL_7, ADC_ATTEN_DB_2_5);//ADC1_GPIO35_CHANNEL
+esp_err_t config_err_1 = adc1_config_channel_atten(ADC1_CHANNEL_4, ADC_ATTEN_DB_2_5);
+esp_err_t config_err_2 = adc1_config_channel_atten(ADC1_CHANNEL_3, ADC_ATTEN_DB_2_5);
+esp_err_t config_err_3 = adc1_config_channel_atten(ADC1_CHANNEL_0, ADC_ATTEN_DB_2_5);
+esp_err_t config_err_4 = adc1_config_channel_atten(ADC1_CHANNEL_6, ADC_ATTEN_DB_2_5);
+esp_err_t config_err_5 = adc1_config_channel_atten(ADC1_CHANNEL_7, ADC_ATTEN_DB_2_5);
 #define NUM_TLC59711 1
-#define tlcData   5
-#define tlcClock  21
+#define tlcData   GPIO_NUM_16
+#define tlcClock  GPIO_NUM_21
 TLC59711 tlc = TLC59711(NUM_TLC59711, tlcClock, tlcData);
-MotorUnit motor1 = MotorUnit(&tlc, 1, 0, ADC1_CHANNEL_5, 10000.0, adc_1_characterisitics, 17, 29);//ADC1_GPIO33_CHANNEL
-MotorUnit motor2 = MotorUnit(&tlc, 3, 2, ADC1_CHANNEL_6, 10000.0, adc_1_characterisitics, 3, 29);//ADC1_GPIO34_CHANNEL
-MotorUnit motor3 = MotorUnit(&tlc, 5, 4, ADC1_CHANNEL_0, 10000.0, adc_1_characterisitics, 22, -29);//ADC1_GPIO36_CHANNEL
-MotorUnit motor4 = MotorUnit(&tlc, 7, 6, ADC1_CHANNEL_4, 10000.0, adc_1_characterisitics, 25, 29);//ADC1_GPIO32_CHANNEL
-MotorUnit motor5 = MotorUnit(&tlc, 9, 8, ADC1_CHANNEL_7, 10000.0, adc_1_characterisitics, 13, -29);//ADC1_GPIO35_CHANNEL
+MotorUnit motor1 = MotorUnit(&tlc, 1, 0, ADC1_CHANNEL_4, 10000.0, adc_1_characterisitics, GPIO_NUM_17, 29);
+MotorUnit motor2 = MotorUnit(&tlc, 3, 2, ADC1_CHANNEL_3, 10000.0, adc_1_characterisitics, GPIO_NUM_3, 29);
+MotorUnit motor3 = MotorUnit(&tlc, 5, 4, ADC1_CHANNEL_0, 10000.0, adc_1_characterisitics, GPIO_NUM_22, -29);
+MotorUnit motor4 = MotorUnit(&tlc, 7, 6, ADC1_CHANNEL_6, 10000.0, adc_1_characterisitics, GPIO_NUM_33, 29);
+MotorUnit motor5 = MotorUnit(&tlc, 9, 8, ADC1_CHANNEL_7, 10000.0, adc_1_characterisitics, GPIO_NUM_25, -29);
 
-LimitSwitch flexionLimit = LimitSwitch(GPIO_NUM_14, true);
-LimitSwitch extensionLimit = LimitSwitch(GPIO_NUM_16, true);
+LimitSwitch flexionLimit = LimitSwitch(GPIO_NUM_26, true);
+LimitSwitch extensionLimit = LimitSwitch(GPIO_NUM_2, true);
 
 Ticker motorTimer = Ticker();
 Ticker angleTimer = Ticker();
@@ -85,9 +86,10 @@ void setup(){
         printMessageInt("",cycleSpeeds[i]);
     }
     #ifndef BOARD_BRINGUP
+        printMessage("Press both limit switches to begin calibration");
         calibrateArmMovement();
         motorTimer.attach_ms(100, onControlTimer); //Gets error when faster than ~100ms cycle
-        angleTimer.attach(sampleRateS, onAngleTimer);
+        // angleTimer.attach(sampleRateS, onAngleTimer);
     #endif
     printMessage("Setup complete");
 
@@ -96,34 +98,41 @@ void setup(){
 void calibrateArmMovement(){
     while (1){
         delay(1);
-        if (flexionLimit.getState()== 0 && extensionLimit.getState()==0){
-            motor1.stop();
-            printMessage("EStop");
-        }
-        if (hitFlexionLimit == false){
-            if (needSpeed == true){
-                motor1.motor->runAtPID(35000);
-                printMessage("Set motor speed forward");
-                needSpeed = false;
-            }
-            if (flexionLimit.getState() == 0){
-                hitFlexionLimit = true;
-                needSpeed = true;
-                motor1.setMaxAngle();
-                printMessageFloat("Min Angle Set to", motor1.getMaxAngle());
+        if (startCommand == false){
+            if (flexionLimit.getState()== 0 && extensionLimit.getState()==0){
+                printMessage("Received start command");
+                startCommand = true;
             }
         } else {
-            if (needSpeed == true){
-                motor1.motor->runAtPID(-35000);
-                printMessage("Set motor speed backward");
-                needSpeed = false;
-            }
-            if (extensionLimit.getState() == 0){
-                calibrationFinished = true;
-                motor1.setMinAngle();
-                printMessageFloat("Min Angle Set to", motor1.getMinAngle());
+            if (flexionLimit.getState()== 0 && extensionLimit.getState()==0){
                 motor1.stop();
-                return;
+                printMessage("EStop");
+            }
+            if (hitFlexionLimit == false){
+                if (needSpeed == true){
+                    motor1.motor->runAtPID(35000);
+                    printMessage("Set motor speed forward");
+                    needSpeed = false;
+                }
+                if (flexionLimit.getState() == 0){
+                    hitFlexionLimit = true;
+                    needSpeed = true;
+                    motor1.setMaxAngle();
+                    printMessageFloat("Min Angle Set to", motor1.getMaxAngle());
+                }
+            } else {
+                if (needSpeed == true){
+                    motor1.motor->runAtPID(-35000);
+                    printMessage("Set motor speed backward");
+                    needSpeed = false;
+                }
+                if (extensionLimit.getState() == 0){
+                    calibrationFinished = true;
+                    motor1.setMinAngle();
+                    printMessageFloat("Min Angle Set to", motor1.getMinAngle());
+                    motor1.stop();
+                    return;
+                }
             }
         }
     }
