@@ -147,7 +147,7 @@ void MotorUnit::computeSpeed(){
     } else {
         output = -outputMagnitude;
     }
-    if(~disabled){
+    if(disabled == false){
         motor->runAtPID(output);
     }else{
         motor->stop();

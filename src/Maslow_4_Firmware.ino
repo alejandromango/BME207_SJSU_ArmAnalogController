@@ -17,9 +17,10 @@
 #include <random>       // std::default_random_engine
 #include <chrono>
 
-// #define BOARD_BRINGUP
+#define BOARD_BRINGUP
 
 unsigned long ourTime = millis();
+bool attemptedStart = false;
 bool startCommand = false;
 bool hitFlexionLimit = false;
 bool calibrationFinished = false;
@@ -49,22 +50,22 @@ esp_adc_cal_characteristics_t *adc_1_characterisitics = (esp_adc_cal_characteris
 esp_adc_cal_value_t val_type = esp_adc_cal_characterize(ADC_UNIT_1, ADC_ATTEN_DB_2_5, ADC_WIDTH_BIT_12, 1100, adc_1_characterisitics);
 esp_err_t config_err_0 = adc1_config_width(ADC_WIDTH_BIT_12);
 esp_err_t config_err_1 = adc1_config_channel_atten(ADC1_CHANNEL_4, ADC_ATTEN_DB_2_5);
-esp_err_t config_err_2 = adc1_config_channel_atten(ADC1_CHANNEL_3, ADC_ATTEN_DB_2_5);
-esp_err_t config_err_3 = adc1_config_channel_atten(ADC1_CHANNEL_0, ADC_ATTEN_DB_2_5);
-esp_err_t config_err_4 = adc1_config_channel_atten(ADC1_CHANNEL_6, ADC_ATTEN_DB_2_5);
-esp_err_t config_err_5 = adc1_config_channel_atten(ADC1_CHANNEL_7, ADC_ATTEN_DB_2_5);
+// esp_err_t config_err_2 = adc1_config_channel_atten(ADC1_CHANNEL_3, ADC_ATTEN_DB_2_5);
+// esp_err_t config_err_3 = adc1_config_channel_atten(ADC1_CHANNEL_0, ADC_ATTEN_DB_2_5);
+// esp_err_t config_err_4 = adc1_config_channel_atten(ADC1_CHANNEL_6, ADC_ATTEN_DB_2_5);
+// esp_err_t config_err_5 = adc1_config_channel_atten(ADC1_CHANNEL_7, ADC_ATTEN_DB_2_5);
 #define NUM_TLC59711 1
 #define tlcData   GPIO_NUM_16
 #define tlcClock  GPIO_NUM_21
 TLC59711 tlc = TLC59711(NUM_TLC59711, tlcClock, tlcData);
 MotorUnit motor1 = MotorUnit(&tlc, 1, 0, ADC1_CHANNEL_4, 10000.0, adc_1_characterisitics, GPIO_NUM_17, 29);
-MotorUnit motor2 = MotorUnit(&tlc, 3, 2, ADC1_CHANNEL_3, 10000.0, adc_1_characterisitics, GPIO_NUM_3, 29);
-MotorUnit motor3 = MotorUnit(&tlc, 5, 4, ADC1_CHANNEL_0, 10000.0, adc_1_characterisitics, GPIO_NUM_22, -29);
-MotorUnit motor4 = MotorUnit(&tlc, 7, 6, ADC1_CHANNEL_6, 10000.0, adc_1_characterisitics, GPIO_NUM_33, 29);
-MotorUnit motor5 = MotorUnit(&tlc, 9, 8, ADC1_CHANNEL_7, 10000.0, adc_1_characterisitics, GPIO_NUM_25, -29);
+// MotorUnit motor2 = MotorUnit(&tlc, 3, 2, ADC1_CHANNEL_3, 10000.0, adc_1_characterisitics, GPIO_NUM_3, 29);
+// MotorUnit motor3 = MotorUnit(&tlc, 5, 4, ADC1_CHANNEL_0, 10000.0, adc_1_characterisitics, GPIO_NUM_22, -29);
+// MotorUnit motor4 = MotorUnit(&tlc, 7, 6, ADC1_CHANNEL_6, 10000.0, adc_1_characterisitics, GPIO_NUM_33, 29);
+// MotorUnit motor5 = MotorUnit(&tlc, 9, 8, ADC1_CHANNEL_7, 10000.0, adc_1_characterisitics, GPIO_NUM_25, -29);
 
-LimitSwitch flexionLimit = LimitSwitch(GPIO_NUM_26, true);
-LimitSwitch extensionLimit = LimitSwitch(GPIO_NUM_2, true);
+LimitSwitch flexionLimit = LimitSwitch(GPIO_NUM_3, true);
+LimitSwitch extensionLimit = LimitSwitch(GPIO_NUM_22, true);
 
 Ticker motorTimer = Ticker();
 Ticker angleTimer = Ticker();
@@ -89,6 +90,7 @@ void setup(){
         printMessage("Press both limit switches to begin calibration");
         calibrateArmMovement();
         motorTimer.attach_ms(100, onControlTimer); //Gets error when faster than ~100ms cycle
+        angleTimer.attach(1, onAngleTimer);
         // angleTimer.attach(sampleRateS, onAngleTimer);
     #endif
     printMessage("Setup complete");
@@ -99,10 +101,14 @@ void calibrateArmMovement(){
     while (1){
         delay(1);
         if (startCommand == false){
-            if (flexionLimit.getState()== 0 && extensionLimit.getState()==0){
+            if (flexionLimit.getState()== 0 && extensionLimit.getState()==0 && attemptedStart == false){
                 printMessage("Received start command");
+                attemptedStart = true;
+            } else if (flexionLimit.getState()== 1 && extensionLimit.getState()==1 && attemptedStart == true){   
+                printMessage("Proceeding start command");
                 startCommand = true;
             }
+            
         } else {
             if (flexionLimit.getState()== 0 && extensionLimit.getState()==0){
                 motor1.stop();
@@ -223,18 +229,19 @@ void loop(){
 #else
   printMessage("Pins high:");
   motor1.motor->highZ();
-  motor2.motor->highZ();
-  motor3.motor->highZ();
-  motor4.motor->highZ();
-  motor5.motor->highZ();
+//   motor2.motor->highZ();
+//   motor3.motor->highZ();
+//   motor4.motor->highZ();
+//   motor5.motor->highZ();
   motor1.angleSensor->printState();
+  angleLog(motor1.getCurrentAngle());
   delay(5000);
   printMessage("Pins low:");
   motor1.motor->stop();
-  motor2.motor->stop();
-  motor3.motor->stop();
-  motor4.motor->stop();
-  motor5.motor->stop();
+//   motor2.motor->stop();
+//   motor3.motor->stop();
+//   motor4.motor->stop();
+//   motor5.motor->stop();
   delay(5000);
 #endif
 }
