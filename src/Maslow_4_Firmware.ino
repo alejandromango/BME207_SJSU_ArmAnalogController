@@ -48,22 +48,22 @@ esp_adc_cal_characteristics_t *adc_1_characterisitics = (esp_adc_cal_characteris
 esp_adc_cal_value_t val_type = esp_adc_cal_characterize(ADC_UNIT_1, ADC_ATTEN_DB_2_5, ADC_WIDTH_BIT_12, 1100, adc_1_characterisitics);
 esp_err_t config_err_0 = adc1_config_width(ADC_WIDTH_BIT_12);
 esp_err_t config_err_1 = adc1_config_channel_atten(ADC1_CHANNEL_5, ADC_ATTEN_DB_2_5);//ADC1_GPIO33_CHANNEL
-esp_err_t config_err_2 = adc1_config_channel_atten(ADC1_CHANNEL_6, ADC_ATTEN_DB_2_5);//ADC1_GPIO34_CHANNEL
-esp_err_t config_err_3 = adc1_config_channel_atten(ADC1_CHANNEL_0, ADC_ATTEN_DB_2_5);//ADC1_GPIO36_CHANNEL
-esp_err_t config_err_4 = adc1_config_channel_atten(ADC1_CHANNEL_4, ADC_ATTEN_DB_2_5);//ADC1_GPIO32_CHANNEL
-esp_err_t config_err_5 = adc1_config_channel_atten(ADC1_CHANNEL_7, ADC_ATTEN_DB_2_5);//ADC1_GPIO35_CHANNEL
+// esp_err_t config_err_2 = adc1_config_channel_atten(ADC1_CHANNEL_6, ADC_ATTEN_DB_2_5);//ADC1_GPIO34_CHANNEL
+// esp_err_t config_err_3 = adc1_config_channel_atten(ADC1_CHANNEL_0, ADC_ATTEN_DB_2_5);//ADC1_GPIO36_CHANNEL
+// esp_err_t config_err_4 = adc1_config_channel_atten(ADC1_CHANNEL_4, ADC_ATTEN_DB_2_5);//ADC1_GPIO32_CHANNEL
+// esp_err_t config_err_5 = adc1_config_channel_atten(ADC1_CHANNEL_7, ADC_ATTEN_DB_2_5);//ADC1_GPIO35_CHANNEL
 #define NUM_TLC59711 1
 #define tlcData   5
 #define tlcClock  21
 TLC59711 tlc = TLC59711(NUM_TLC59711, tlcClock, tlcData);
 MotorUnit motor1 = MotorUnit(&tlc, 1, 0, ADC1_CHANNEL_5, 10000.0, adc_1_characterisitics, 17, 29);//ADC1_GPIO33_CHANNEL
-MotorUnit motor2 = MotorUnit(&tlc, 3, 2, ADC1_CHANNEL_6, 10000.0, adc_1_characterisitics, 3, 29);//ADC1_GPIO34_CHANNEL
-MotorUnit motor3 = MotorUnit(&tlc, 5, 4, ADC1_CHANNEL_0, 10000.0, adc_1_characterisitics, 22, -29);//ADC1_GPIO36_CHANNEL
-MotorUnit motor4 = MotorUnit(&tlc, 7, 6, ADC1_CHANNEL_4, 10000.0, adc_1_characterisitics, 25, 29);//ADC1_GPIO32_CHANNEL
-MotorUnit motor5 = MotorUnit(&tlc, 9, 8, ADC1_CHANNEL_7, 10000.0, adc_1_characterisitics, 13, -29);//ADC1_GPIO35_CHANNEL
+// MotorUnit motor2 = MotorUnit(&tlc, 3, 2, ADC1_CHANNEL_6, 10000.0, adc_1_characterisitics, 3, 29);//ADC1_GPIO34_CHANNEL
+// MotorUnit motor3 = MotorUnit(&tlc, 5, 4, ADC1_CHANNEL_0, 10000.0, adc_1_characterisitics, 22, -29);//ADC1_GPIO36_CHANNEL
+// MotorUnit motor4 = MotorUnit(&tlc, 7, 6, ADC1_CHANNEL_4, 10000.0, adc_1_characterisitics, 25, 29);//ADC1_GPIO32_CHANNEL
+// MotorUnit motor5 = MotorUnit(&tlc, 9, 8, ADC1_CHANNEL_7, 10000.0, adc_1_characterisitics, 13, -29);//ADC1_GPIO35_CHANNEL
 
-LimitSwitch flexionLimit = LimitSwitch(GPIO_NUM_14, true);
-LimitSwitch extensionLimit = LimitSwitch(GPIO_NUM_16, true);
+LimitSwitch flexionLimit = LimitSwitch(GPIO_NUM_3, true);
+LimitSwitch extensionLimit = LimitSwitch(GPIO_NUM_22, true);
 
 Ticker motorTimer = Ticker();
 Ticker angleTimer = Ticker();
@@ -214,18 +214,21 @@ void loop(){
 #else
   printMessage("Pins high:");
   motor1.motor->highZ();
-  motor2.motor->highZ();
-  motor3.motor->highZ();
-  motor4.motor->highZ();
-  motor5.motor->highZ();
+//   motor2.motor->highZ();
+//   motor3.motor->highZ();
+//   motor4.motor->highZ();
+//   motor5.motor->highZ();
   motor1.angleSensor->printState();
-  delay(5000);
+  Serial.println(motor1.getControllerState());
+  delay(1000);
   printMessage("Pins low:");
   motor1.motor->stop();
-  motor2.motor->stop();
-  motor3.motor->stop();
-  motor4.motor->stop();
-  motor5.motor->stop();
-  delay(5000);
+//   motor2.motor->stop();
+//   motor3.motor->stop();
+//   motor4.motor->stop();
+//   motor5.motor->stop();
+  motor1.angleSensor->printState();
+  Serial.println(motor1.getControllerState());
+  delay(1000);
 #endif
 }
