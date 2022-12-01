@@ -1,8 +1,8 @@
-#include <WiFi.h>
-#include <FS.h>
-#include "AsyncTCP.h"
-#include "ESPAsyncWebServer.h" //https://github.com/me-no-dev/ESPAsyncWebServer
-#include "html.h"
+// #include <WiFi.h>
+// #include <FS.h>
+// #include "AsyncTCP.h"
+// #include "ESPAsyncWebServer.h" //https://github.com/me-no-dev/ESPAsyncWebServer
+// #include "html.h"
 #include "TLC59711.h"
 #include "MotorUnit.h"
 #include "LimitSwitch.h"
