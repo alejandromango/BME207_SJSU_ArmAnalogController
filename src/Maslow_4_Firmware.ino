@@ -17,7 +17,7 @@
 #include <random>       // std::default_random_engine
 #include <chrono>
 
-#define BOARD_BRINGUP
+// #define BOARD_BRINGUP
 
 unsigned long ourTime = millis();
 bool attemptedStart = false;
@@ -58,7 +58,7 @@ esp_err_t config_err_1 = adc1_config_channel_atten(ADC1_CHANNEL_4, ADC_ATTEN_DB_
 #define tlcData   GPIO_NUM_16
 #define tlcClock  GPIO_NUM_21
 TLC59711 tlc = TLC59711(NUM_TLC59711, tlcClock, tlcData);
-MotorUnit motor1 = MotorUnit(&tlc, 1, 0, ADC1_CHANNEL_4, 10000.0, adc_1_characterisitics, GPIO_NUM_17, 29);
+MotorUnit motor1 = MotorUnit(&tlc, 0, 1, ADC1_CHANNEL_4, 10000.0, adc_1_characterisitics, GPIO_NUM_17, 29);
 // MotorUnit motor2 = MotorUnit(&tlc, 3, 2, ADC1_CHANNEL_3, 10000.0, adc_1_characterisitics, GPIO_NUM_3, 29);
 // MotorUnit motor3 = MotorUnit(&tlc, 5, 4, ADC1_CHANNEL_0, 10000.0, adc_1_characterisitics, GPIO_NUM_22, -29);
 // MotorUnit motor4 = MotorUnit(&tlc, 7, 6, ADC1_CHANNEL_6, 10000.0, adc_1_characterisitics, GPIO_NUM_33, 29);
@@ -70,6 +70,7 @@ LimitSwitch extensionLimit = LimitSwitch(GPIO_NUM_22, true);
 Ticker motorTimer = Ticker();
 Ticker angleTimer = Ticker();
 float sampleRateS = 1/60;
+unsigned long lastEnd = millis();
 
 void setup(){
     Serial.begin(115200);
@@ -90,7 +91,7 @@ void setup(){
         printMessage("Press both limit switches to begin calibration");
         calibrateArmMovement();
         motorTimer.attach_ms(100, onControlTimer); //Gets error when faster than ~100ms cycle
-        angleTimer.attach(1, onAngleTimer);
+        // angleTimer.attach(1, onAngleTimer);
         // angleTimer.attach(sampleRateS, onAngleTimer);
     #endif
     printMessage("Setup complete");
@@ -185,12 +186,18 @@ void loop(){
         cState = NEXT;
         break;
     case SETTLING:
+        if ((millis() - lastEnd) > 300){
+            motor1.stop();
+            cState = NEXT;
+        } 
         break;
     case EXTENDING:
         if (extensionLimit.getState() == 0){
-            motor1.stop();
-            printMessage("Hit Flexion Limit, Loading Next Movement");
-            cState = NEXT;
+            printMessage("Hit Extension Limit, Loading Next Movement");
+            motor1.setSpeed(SLOW);
+            motor1.setFlexion();
+            lastEnd = millis();
+            cState = SETTLING;
         }
         break;
     case FLEXING:

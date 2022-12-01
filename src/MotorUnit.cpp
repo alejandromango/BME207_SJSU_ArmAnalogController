@@ -43,18 +43,18 @@ void MotorUnit::setSpeed(speed newSpeed){
     switch (currentSpeedSetting) {
         case SLOW:
             currentSpeed = 35000;
-            printMessage("Running at medium slow speed");
+            printMessage("Running at slow speed");
             break;
         case MEDIUMSLOW:
-            currentSpeed = 35000;
+            currentSpeed = 45000;
             printMessage("Running at medium slow speed");
             break;
         case MEDIUMFAST:
-            currentSpeed = 35000;
+            currentSpeed = 52000;
             printMessage("Running at medium fast speed");
             break;
         case FAST:
-            currentSpeed = 35000;
+            currentSpeed = 60000;
             printMessage("Running at fast speed");
             break;
     }
@@ -141,7 +141,7 @@ void MotorUnit::computeSpeed(){
     currentState = getControllerState();
     // Normalize angle to between 0-2*pi, then take the cosine to get smooth speed curve
     // Scale speed to max speed
-    outputMagnitude = 35000;//((-cos(((currentState-minAngle)/maxAngle)*PI*2) + 1)/2 * (currentSpeed - minSpeed)) + minSpeed;
+    outputMagnitude = currentSpeed;//35000;//((-cos(((currentState-minAngle)/maxAngle)*PI*2) + 1)/2 * (currentSpeed - minSpeed)) + minSpeed;
     if (currentDirection == FLEXION) {
         output = outputMagnitude;
     } else {
