@@ -26,23 +26,23 @@ bool hitFlexionLimit = false;
 bool calibrationFinished = false;
 bool needSpeed = true;
 int cycleNumber = -1;
-int numReplicates = 1;
+int numReplicates = 10;
 const int numCycles = numReplicates * (FAST + 1);
 enum cyclingStates {INIT, SETTLING, FLEXING, EXTENDING, FINISHED, ABORTED, RESETTING, NEXT};
 cyclingStates cState = INIT;
 
 // generate a randomly ordered array of speeds
 // https://cplusplus.com/reference/algorithm/shuffle/
-std::array<speed,4> cycleSpeeds {SLOW, MEDIUMSLOW, MEDIUMFAST, FAST};
-                                //   SLOW, MEDIUMSLOW, MEDIUMFAST, FAST,
-                                //   SLOW, MEDIUMSLOW, MEDIUMFAST, FAST,
-                                //   SLOW, MEDIUMSLOW, MEDIUMFAST, FAST,
-                                //   SLOW, MEDIUMSLOW, MEDIUMFAST, FAST,
-                                //   SLOW, MEDIUMSLOW, MEDIUMFAST, FAST,
-                                //   SLOW, MEDIUMSLOW, MEDIUMFAST, FAST,
-                                //   SLOW, MEDIUMSLOW, MEDIUMFAST, FAST,
-                                //   SLOW, MEDIUMSLOW, MEDIUMFAST, FAST,
-                                //   SLOW, MEDIUMSLOW, MEDIUMFAST, FAST};
+std::array<speed,40> cycleSpeeds {SLOW, MEDIUMSLOW, MEDIUMFAST, FAST,
+                                  SLOW, MEDIUMSLOW, MEDIUMFAST, FAST,
+                                  SLOW, MEDIUMSLOW, MEDIUMFAST, FAST,
+                                  SLOW, MEDIUMSLOW, MEDIUMFAST, FAST,
+                                  SLOW, MEDIUMSLOW, MEDIUMFAST, FAST,
+                                  SLOW, MEDIUMSLOW, MEDIUMFAST, FAST,
+                                  SLOW, MEDIUMSLOW, MEDIUMFAST, FAST,
+                                  SLOW, MEDIUMSLOW, MEDIUMFAST, FAST,
+                                  SLOW, MEDIUMSLOW, MEDIUMFAST, FAST,
+                                  SLOW, MEDIUMSLOW, MEDIUMFAST, FAST};
 // obtain a time-based seed:
 unsigned seed = std::chrono::system_clock::now().time_since_epoch().count();
 
@@ -91,7 +91,7 @@ void setup(){
         printMessage("Press both limit switches to begin calibration");
         calibrateArmMovement();
         motorTimer.attach_ms(100, onControlTimer); //Gets error when faster than ~100ms cycle
-        // angleTimer.attach(1, onAngleTimer);
+        angleTimer.attach(1, onAngleTimer);
         // angleTimer.attach(sampleRateS, onAngleTimer);
     #endif
     printMessage("Setup complete");
@@ -226,6 +226,7 @@ void loop(){
         delay(1000);
         printMessage("Starting next cycle in 1s");
         delay(1000);
+        printMessageInt("Starting cycle number", cycleNumber + 1);
         motor1.setSpeed(cycleSpeeds[cycleNumber]);
         motor1.setFlexion();
         motor1.reset();
