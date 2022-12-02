@@ -52,7 +52,7 @@ void AS5048A::init(){
  // initialization of the Slave Select pin if the LOW slave interacts with the master if the HIGH slave ignores the signals from the master
   pinMode(_cs, OUTPUT);
   //SPI has an internal SPI-device counter, it is possible to call "begin()" from different devices
-  SPI.begin(); //void begin(int8_t sck=-1, int8_t miso=-1, int8_t mosi=-1, int8_t ss=-1);
+  SPI.begin(GPIO_NUM_14, GPIO_NUM_12, GPIO_NUM_13, _cs); //void begin(int8_t sck=-, int8_t miso=-1, int8_t mosi=-1, int8_t ss=-1);
 }
 
 /**
@@ -205,7 +205,7 @@ void AS5048A::printState(){
   word data;
   data = AS5048A::getState();
   if(AS5048A::error()){
-    printMessage("Error bit was set! (function printState register Diagnostics + Automatic Gain Control (AGC) )");
+    // printMessage("Error bit was set! (function printState register Diagnostics + Automatic Gain Control (AGC) )");
   }
   printMessage(" ");
   printMessage("The value of the automatic control of the magnetic field gain");
@@ -237,7 +237,7 @@ void AS5048A::printState(){
 byte AS5048A::getGain(){
   word data = AS5048A::getState();
   if(AS5048A::error()){
-    printMessage("Error bit was set! (function getGain register Diagnostics + Automatic Gain Control (AGC) )");
+    // printMessage("Error bit was set! (function getGain register Diagnostics + Automatic Gain Control (AGC) )");
   }
   return (byte) data & 0xFF;
 }
@@ -266,7 +266,7 @@ void AS5048A::printErrors(){
   word data;
   data = AS5048A::getErrors();
   if(AS5048A::error()){
-    printMessage("Error bit was set! (function printErrors register Clear Error Flag)");
+    // printMessage("Error bit was set! (function printErrors register Clear Error Flag)");
   }
   printMessage("Error register");
   printMessageInt("Command frame (packet) error ", bitRead(data,0));

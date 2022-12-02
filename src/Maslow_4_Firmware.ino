@@ -241,14 +241,16 @@ void loop(){
 //   motor4.motor->highZ();
 //   motor5.motor->highZ();
   motor1.angleSensor->printState();
-  angleLog(motor1.getCurrentAngle());
-  delay(5000);
+  angleLog(motor1.getControllerState());
+  delay(1000);
   printMessage("Pins low:");
   motor1.motor->stop();
 //   motor2.motor->stop();
 //   motor3.motor->stop();
 //   motor4.motor->stop();
 //   motor5.motor->stop();
-  delay(5000);
+  motor1.angleSensor->printState();
+  angleLog(motor1.getControllerState());
+  delay(1000);
 #endif
 }
